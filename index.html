@@ -1,2 +1,441 @@
-">html<
-        primeior
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestor de Tarefas</title>
+<style>
+:root {
+  font-family: Arial, sans-serif;
+  color: #202938;
+  background: #f1f4f8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header {
+  background: #17365d;
+  color: white;
+  padding: 22px 16px;
+}
+header h1 { margin: 0 0 8px; font-size: 25px; }
+header p { margin: 0; font-size: 14px; }
+main { max-width: 850px; margin: auto; padding: 16px; }
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px #0000000c;
+}
+h2 { margin-top: 0; font-size: 19px; }
+label { display: block; font-weight: bold; margin: 12px 0 6px; }
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  font-size: 16px;
+  background: white;
+}
+textarea { min-height: 75px; resize: vertical; }
+button {
+  border: 0;
+  border-radius: 7px;
+  padding: 12px 15px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #1765b1;
+  color: white;
+  margin-top: 12px;
+}
+button.secondary { background: #526174; }
+button.danger { background: #b42318; }
+button.light { background: #e5edf7; color: #17365d; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button { flex: 1; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.stat {
+  background: #eaf1fa;
+  padding: 14px 8px;
+  border-radius: 8px;
+  text-align: center;
+}
+.stat strong { display: block; font-size: 23px; }
+.stat span { font-size: 12px; }
+.task {
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  padding: 14px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.task h3 { margin: 0 0 8px; }
+.task p { margin: 6px 0; font-size: 14px; }
+.status { font-weight: bold; color: #1765b1; }
+.muted { color: #64748b; font-size: 13px; }
+#mensagem { margin-top: 10px; color: #176b40; }
+@media print {
+  header { background: white; color: black; padding: 0; }
+  main { padding: 0; }
+  .no-print, button, input, select, textarea, label,
+  #formulario, #pesquisa, .stats { display: none !important; }
+  body { background: white; }
+  .card, .task { box-shadow: none; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Gestor de Tarefas</h1>
+  <p>Organização de trabalhos e relatórios PDF</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Resumo dos trabalhos</h2>
+    <div class="stats">
+      <div class="stat"><strong id="total">0</strong><span>Total</span></div>
+      <div class="stat"><strong id="pendentes">0</strong><span>Pendentes</span></div>
+      <div class="stat"><strong id="concluidos">0</strong><span>Concluídos</span></div>
+    </div>
+  </section>
+
+  <section class="card no-print" id="formulario">
+    <h2 id="tituloFormulario">Registar trabalho</h2>
+    <form id="formTarefa">
+      <input type="hidden" id="id">
+
+      <label for="trabalho">Nome do trabalho *</label>
+      <input id="trabalho" required maxlength="120"
+        placeholder="Ex.: Impressão de cartazes">
+
+      <label for="cliente">Cliente</label>
+      <input id="cliente" maxlength="120"
+        placeholder="Nome do cliente">
+
+      <label for="data">Data do trabalho</label>
+      <input id="data" type="date">
+
+      <label for="estado">Estado</label>
+      <select id="estado">
+        <option value="Pendente">Pendente</option>
+        <option value="Em curso">Em curso</option>
+        <option value="Concluído">Concluído</option>
+      </select>
+
+      <label for="notas">Notas / descrição</label>
+      <textarea id="notas" maxlength="2000"
+        placeholder="Detalhes, materiais ou observações"></textarea>
+
+      <div class="actions">
+        <button type="submit" id="guardar">Guardar trabalho</button>
+        <button type="button" class="light" id="cancelar"
+          hidden>Cancelar edição</button>
+      </div>
+      <p id="mensagem" role="status"></p>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Lista de trabalhos</h2>
+    <div class="no-print" id="pesquisa">
+      <label for="filtro">Pesquisar</label>
+      <input id="filtro" placeholder="Nome ou cliente...">
+
+      <label for="filtroEstado">Filtrar por estado</label>
+      <select id="filtroEstado">
+        <option value="">Todos os estados</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Em curso">Em curso</option>
+        <option value="Concluído">Concluído</option>
+      </select>
+      <div class="actions">
+        <button type="button" id="pdf">Imprimir / Guardar PDF</button>
+        <button type="button" class="secondary" id="exportar">
+          Exportar dados
+        </button>
+      </div>
+      <p class="muted">
+        O relatório inclui os trabalhos visíveis após aplicar os filtros.
+      </p>
+    </div>
+    <div id="lista"></div>
+  </section>
+
+  <section class="card no-print">
+    <h2>Importar cópia de segurança</h2>
+    <p class="muted">
+      Seleciona um ficheiro JSON exportado anteriormente.
+    </p>
+    <input type="file" id="importar" accept=".json,application/json">
+    <button type="button" class="secondary" id="importarBotao">
+      Importar dados
+    </button>
+    <p class="muted">
+      A importação substitui os registos atuais. Exporta primeiro
+      uma cópia se quiseres preservá-los.
+    </p>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const CHAVE = "gestorTarefasPDF_v1";
+const $ = id => document.getElementById(id);
+let tarefas = carregar();
+
+function carregar() {
+  try {
+    const dados = JSON.parse(localStorage.getItem(CHAVE) || "[]");
+    return Array.isArray(dados) ? dados : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarDados() {
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify(tarefas));
+    return true;
+  } catch {
+    alert("Não foi possível guardar os dados neste navegador.");
+    return false;
+  }
+}
+
+function textoSeguro(valor) {
+  return String(valor ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[c]);
+}
+
+function mostrarData(data) {
+  if (!data) return "Sem data";
+  const partes = data.split("-");
+  return partes.length === 3
+    ? `${partes[2]}/${partes[1]}/${partes[0]}`
+    : data;
+}
+
+function tarefasVisiveis() {
+  const termo = $("filtro").value.trim().toLocaleLowerCase("pt");
+  const estado = $("filtroEstado").value;
+
+  return tarefas.filter(t => {
+    const pesquisa = `${t.trabalho} ${t.cliente} ${t.notas}`
+      .toLocaleLowerCase("pt");
+    return pesquisa.includes(termo) && (!estado || t.estado === estado);
+  }).sort((a, b) => (a.data || "9999").localeCompare(b.data || "9999"));
+}
+
+function atualizar() {
+  $("total").textContent = tarefas.length;
+  $("pendentes").textContent =
+    tarefas.filter(t => t.estado === "Pendente").length;
+  $("concluidos").textContent =
+    tarefas.filter(t => t.estado === "Concluído").length;
+
+  const lista = $("lista");
+  const visiveis = tarefasVisiveis();
+
+  if (!visiveis.length) {
+    lista.innerHTML = "<p class='muted'>Ainda não existem trabalhos para mostrar.</p>";
+    return;
+  }
+
+  lista.innerHTML = visiveis.map(t => `
+    <article class="task">
+      <h3>${textoSeguro(t.trabalho)}</h3>
+      <p><strong>Cliente:</strong> ${textoSeguro(t.cliente || "Não indicado")}</p>
+      <p><strong>Data:</strong> ${textoSeguro(mostrarData(t.data))}</p>
+      <p><strong>Estado:</strong>
+        <span class="status">${textoSeguro(t.estado)}</span>
+      </p>
+      ${t.notas ? `<p><strong>Notas:</strong><br>${textoSeguro(t.notas).replace(/\n/g, "<br>")}</p>` : ""}
+      <div class="actions no-print">
+        <button type="button" class="light" data-editar="${textoSeguro(t.id)}">Editar</button>
+        <button type="button" class="secondary" data-alterar="${textoSeguro(t.id)}">Alterar estado</button>
+        <button type="button" class="danger" data-apagar="${textoSeguro(t.id)}">Apagar</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+$("formTarefa").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const id = $("id").value;
+  const anterior = tarefas.find(t => t.id === id);
+
+  const registo = {
+    id: id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)),
+    trabalho: $("trabalho").value.trim(),
+    cliente: $("cliente").value.trim(),
+    data: $("data").value,
+    estado: $("estado").value,
+    notas: $("notas").value.trim()
+  };
+
+  if (!registo.trabalho) {
+    $("trabalho").focus();
+    return;
+  }
+
+  if (id) {
+    tarefas = tarefas.map(t => t.id === id ? registo : t);
+  } else {
+    tarefas.push(registo);
+  }
+
+  if (!guardarDados()) {
+    tarefas = id
+      ? tarefas.map(t => t.id === id ? anterior : t)
+      : tarefas.filter(t => t.id !== registo.id);
+    return;
+  }
+
+  $("formTarefa").reset();
+  $("id").value = "";
+  $("tituloFormulario").textContent = "Registar trabalho";
+  $("guardar").textContent = "Guardar trabalho";
+  $("cancelar").hidden = true;
+  $("mensagem").textContent = "Trabalho guardado com sucesso.";
+  atualizar();
+});
+
+$("cancelar").addEventListener("click", () => {
+  $("formTarefa").reset();
+  $("id").value = "";
+  $("tituloFormulario").textContent = "Registar trabalho";
+  $("guardar").textContent = "Guardar trabalho";
+  $("cancelar").hidden = true;
+});
+
+$("lista").addEventListener("click", event => {
+  const botao = event.target.closest("button");
+  if (!botao) return;
+
+  const editar = botao.dataset.editar;
+  const alterar = botao.dataset.alterar;
+  const apagar = botao.dataset.apagar;
+
+  if (editar) {
+    const t = tarefas.find(x => x.id === editar);
+    if (!t) return;
+
+    $("id").value = t.id;
+    $("trabalho").value = t.trabalho;
+    $("cliente").value = t.cliente;
+    $("data").value = t.data;
+    $("estado").value = t.estado;
+    $("notas").value = t.notas;
+    $("tituloFormulario").textContent = "Editar trabalho";
+    $("guardar").textContent = "Guardar alterações";
+    $("cancelar").hidden = false;
+    $("formulario").scrollIntoView({ behavior: "smooth" });
+  }
+
+  if (alterar) {
+    const t = tarefas.find(x => x.id === alterar);
+    if (!t) return;
+
+    const estados = ["Pendente", "Em curso", "Concluído"];
+    const proximo = estados[(estados.indexOf(t.estado) + 1) % estados.length];
+    const anterior = t.estado;
+    t.estado = proximo;
+
+    if (!guardarDados()) {
+      t.estado = anterior;
+      return;
+    }
+    atualizar();
+  }
+
+  if (apagar) {
+    const t = tarefas.find(x => x.id === apagar);
+    if (!t || !confirm(`Queres apagar o trabalho "${t.trabalho}"?`)) return;
+
+    const anteriores = tarefas;
+    tarefas = tarefas.filter(x => x.id !== apagar);
+    if (!guardarDados()) {
+      tarefas = anteriores;
+      return;
+    }
+    atualizar();
+  }
+});
+
+$("filtro").addEventListener("input", atualizar);
+$("filtroEstado").addEventListener("change", atualizar);
+
+$("pdf").addEventListener("click", () => {
+  if (!tarefasVisiveis().length) {
+    alert("Não existem trabalhos para incluir no relatório.");
+    return;
+  }
+  window.print();
+});
+
+$("exportar").addEventListener("click", () => {
+  const blob = new Blob(
+    [JSON.stringify(tarefas, null, 2)],
+    { type: "application/json;charset=utf-8" }
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "copia-gestor-tarefas.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+$("importarBotao").addEventListener("click", async () => {
+  const ficheiro = $("importar").files[0];
+  if (!ficheiro) {
+    alert("Escolhe primeiro um ficheiro JSON.");
+    return;
+  }
+
+  try {
+    const dados = JSON.parse(await ficheiro.text());
+    const valido = Array.isArray(dados) && dados.every(t =>
+      t && typeof t.id === "string" &&
+      typeof t.trabalho === "string" &&
+      typeof t.cliente === "string" &&
+      typeof t.data === "string" &&
+      ["Pendente", "Em curso", "Concluído"].includes(t.estado) &&
+      typeof t.notas === "string"
+    );
+
+    if (!valido) throw new Error("Formato inválido");
+
+    if (!confirm("A importação vai substituir todos os registos atuais. Continuar?")) return;
+
+    const anteriores = tarefas;
+    tarefas = dados;
+    if (!guardarDados()) {
+      tarefas = anteriores;
+      return;
+    }
+    atualizar();
+    alert("Dados importados com sucesso.");
+  } catch {
+    alert("Não foi possível importar. Confirma que escolheste uma cópia JSON válida.");
+  }
+});
+
+atualizar();
+</script>
+</body>
+</html>
